@@ -1,695 +1,723 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { BookOpen, MessageCircle, Gamepad2, ArrowLeft, Volume2, CheckCircle2, XCircle, Trophy, RefreshCw, Star, Settings, Play, Eye, EyeOff, ExternalLink } from 'lucide-react';
-
-// --- モックデータ ---
-
-const vocabularyData = [
-  { id: 1, en: "PokéStop", jp: "ポケストップ", category: "Basic", example: "Spin the PokéStop." },
-  { id: 2, en: "Gym", jp: "ジム", category: "Basic", example: "Let's take down this Gym." },
-  { id: 3, en: "Raid Battle", jp: "レイドバトル", category: "Battle", example: "A level 5 Raid Battle is starting." },
-  { id: 4, en: "Shiny", jp: "色違い", category: "Pokémon", example: "I finally caught a Shiny!" },
-  { id: 5, en: "Hundo (100% IV)", jp: "個体値100%", category: "Pokémon", example: "Is it a Hundo?" },
-  { id: 6, en: "Trade", jp: "交換", category: "Action", example: "Do you want to trade?" },
-  { id: 7, en: "Catch", jp: "捕まえる", category: "Action", example: "Catch 'em all!" },
-  { id: 8, en: "Hatch", jp: "孵化させる", category: "Action", example: "My egg is about to hatch." },
-  { id: 9, en: "Evolve", jp: "進化させる", category: "Action", example: "I have enough candy to evolve it." },
-  { id: 10, en: "Transfer", jp: "博士に送る", category: "Action", example: "Transfer low IV Pokémon." },
-  { id: 11, en: "Excellent Throw", jp: "エクセレントスロー", category: "Action", example: "Nice Excellent Throw!" },
-  { id: 12, en: "Raid Pass", jp: "レイドパス", category: "Item", example: "Use your daily Raid Pass." },
-  { id: 13, en: "Stardust", jp: "ほしのすな", category: "Item", example: "I need more Stardust to power up." },
-  { id: 14, en: "Lure Module", jp: "ルアーモジュール", category: "Item", example: "Someone dropped a Lure Module." },
-  { id: 15, en: "Community Day", jp: "コミュニティ・デイ", category: "Event", example: "Are you ready for Community Day?" },
-  { id: 16, en: "Shundo", jp: "個体値100%の色違い", category: "Pokémon", example: "I caught my first Shundo today!" },
-  { id: 17, en: "Nundo", jp: "個体値0%", category: "Pokémon", example: "Nundos are rarer than Hundos." },
-  { id: 18, en: "Spoofer", jp: "位置偽装者", category: "Player", example: "Report the spoofer in that Gym." },
-  { id: 19, en: "Whale", jp: "重課金プレイヤー", category: "Player", example: "He buys every ticket, what a whale." },
-  { id: 20, en: "Alt account", jp: "サブ垢", category: "Player", example: "I use my alt account for trading." },
-  { id: 21, en: "STAB", jp: "タイプ一致ボーナス", category: "Battle", example: "Use water moves for STAB." },
-  { id: 22, en: "DPS", jp: "1秒あたりのダメージ", category: "Battle", example: "Mewtwo has very high DPS." },
-  { id: 23, en: "Tanky", jp: "耐久力が高い", category: "Battle", example: "Blissey is too tanky to defeat alone." },
-  { id: 24, en: "Squishy", jp: "耐久力が低い", category: "Battle", example: "Gengar hits hard but is very squishy." },
-  { id: 25, en: "Nest", jp: "ポケモンの巣", category: "Map", example: "This park is a Pikachu nest." },
-  { id: 26, en: "Biome", jp: "バイオーム(出現環境)", category: "Map", example: "Water Pokémon spawn in this biome." },
-  { id: 27, en: "Pseudo-Legendary", jp: "600族(種族値が高いポケモン)", category: "Pokémon", example: "Dragonite is a Pseudo-Legendary." },
-  { id: 28, en: "Regional", jp: "地域限定ポケモン", category: "Pokémon", example: "Tauros is a regional in North America." },
-  { id: 29, en: "Lucky", jp: "キラポケモン", category: "Pokémon", example: "Let's trade to get a Lucky Pokémon." },
-  { id: 30, en: "Best Buddy", jp: "最高の相棒", category: "Friend", example: "My Charizard is now a Best Buddy." },
-  { id: 31, en: "Grind", jp: "周回する・集中的にプレイする", category: "Action", example: "I need to grind Stardust." },
-  { id: 32, en: "CP (Combat Power)", jp: "CP (総合的な強さ)", category: "Basic", example: "What's the CP of that Dragonite?" },
-  { id: 33, en: "IV (Individual Values)", jp: "個体値", category: "Basic", example: "You should check its IVs before evolving." },
-  { id: 34, en: "Candy", jp: "アメ", category: "Item", example: "I need 400 Magikarp candy." },
-  { id: 35, en: "Incense", jp: "おこう", category: "Item", example: "Pop an incense to attract more Pokémon." },
-  { id: 36, en: "Potion", jp: "キズぐすり", category: "Item", example: "Use a potion to heal your Pokémon." },
-  { id: 37, en: "Revive", jp: "げんきのかけら", category: "Item", example: "Do you have any revives left?" },
-  { id: 38, en: "Razz Berry", jp: "ズリのみ", category: "Item", example: "Feed it a Razz Berry to make it easier to catch." },
-  { id: 39, en: "Pinap Berry", jp: "パイルのみ", category: "Item", example: "Always use a Pinap Berry on rare Pokémon." },
-  { id: 40, en: "Golden Razz Berry", jp: "きんのズリのみ", category: "Item", example: "Save your Golden Razz Berries for raid bosses." },
-  { id: 41, en: "Field Research", jp: "フィールドリサーチ", category: "Event", example: "Complete a Field Research task every day." },
-  { id: 42, en: "Special Research", jp: "スペシャルリサーチ", category: "Event", example: "The Mew Special Research is fun." },
-  { id: 43, en: "Incubator", jp: "ふかそうち", category: "Item", example: "Put the 10km egg in the Super Incubator." },
-  { id: 44, en: "Appraisal", jp: "チームリーダーの評価", category: "Basic", example: "The appraisal says it's a three-star." },
-  { id: 45, en: "Weather Boost", jp: "天候ブースト", category: "Battle", example: "Fire types have a weather boost today." },
-  { id: 46, en: "Faint", jp: "ひんしになる", category: "Battle", example: "My entire team fainted." },
-  { id: 47, en: "Poké Ball", jp: "モンスターボール", category: "Item", example: "Throw a Poké Ball." },
-  { id: 48, en: "Great Ball", jp: "スーパーボール", category: "Item", example: "Great Balls have a higher capture rate." },
-  { id: 49, en: "Ultra Ball", jp: "ハイパーボール", category: "Item", example: "Use an Ultra Ball for rare Pokémon." },
-  { id: 50, en: "Master Ball", jp: "マスターボール", category: "Item", example: "Master Ball captures Pokémon every time." },
-  { id: 51, en: "Egg", jp: "タマゴ", category: "Item", example: "Put the egg in an incubator." },
-  { id: 52, en: "Lucky Egg", jp: "しあわせタマゴ", category: "Item", example: "Lucky Egg doubles your XP for 30 minutes." },
-  { id: 53, en: "Super Potion", jp: "いいキズぐすり", category: "Item", example: "Restore 50 HP with a Super Potion." },
-  { id: 54, en: "Pokédex", jp: "ポケモン図鑑", category: "Basic", example: "I registered a new Pokémon to my Pokédex." },
-  { id: 55, en: "PokéCoin", jp: "ポケコイン", category: "Item", example: "You can buy items with PokéCoins." },
-  { id: 56, en: "Experience Points (XP)", jp: "経験値", category: "Basic", example: "You need more XP to level up." },
-  { id: 57, en: "Medal", jp: "メダル", category: "Basic", example: "I earned a new gold medal." },
-  { id: 58, en: "Power-up", jp: "強化する", category: "Action", example: "Power-up your Pokémon using Stardust." },
-  { id: 59, en: "Defender Bonus", jp: "防衛ボーナス", category: "Basic", example: "Claim your Defender Bonus in the shop." },
-  { id: 60, en: "Wild Pokémon", jp: "野生のポケモン", category: "Pokémon", example: "A wild Pikachu appeared!" },
-  { id: 61, en: "Trainer", jp: "トレーナー", category: "Player", example: "Are you a Pokémon Trainer?" },
-  { id: 62, en: "Prestige", jp: "名声(旧ジムシステム)", category: "Basic", example: "Increase the Gym's prestige." },
-  { id: 63, en: "Fast Attack", jp: "ノーマルアタック", category: "Battle", example: "Tap the screen to use a Fast Attack." },
-  { id: 64, en: "Charged Attack", jp: "スペシャルアタック", category: "Battle", example: "You should dodge the Charged Attack!" },
-  { id: 65, en: "Dodge", jp: "避ける", category: "Battle", example: "Swipe left or right to dodge." },
-  { id: 66, en: "Purify", jp: "リトレーンする", category: "Action", example: "Should I purify this Shadow Pokémon?" },
-  { id: 67, en: "Shadow Pokémon", jp: "シャドウポケモン", category: "Pokémon", example: "Shadow Pokémon deal more damage." },
-  { id: 68, en: "Team GO Rocket", jp: "GOロケット団", category: "NPC", example: "Defeat Team GO Rocket Grunts." },
-  { id: 69, en: "Mega Evolution", jp: "メガシンカ", category: "Action", example: "Mega Evolution lasts for 8 hours." },
-  { id: 70, en: "Mega Energy", jp: "メガエナジー", category: "Item", example: "I need more Mega Energy to mega evolve it." },
-  { id: 71, en: "Remote Raid Pass", jp: "リモートレイドパス", category: "Item", example: "I only have one Remote Raid Pass left." },
-  { id: 72, en: "Premium Battle Pass", jp: "プレミアムバトルパス", category: "Item", example: "Use a Premium Battle Pass for better rewards." },
-  { id: 73, en: "Poffin", jp: "ポフィン", category: "Item", example: "Give your buddy a Poffin to make it excited." },
-  { id: 74, en: "Max Potion", jp: "まんたんのくすり", category: "Item", example: "Max Potion fully restores HP." },
-  { id: 75, en: "Max Revive", jp: "げんきのかたまり", category: "Item", example: "Use a Max Revive during the raid." },
-  { id: 76, en: "Star Piece", jp: "ほしのかけら", category: "Item", example: "Make sure to use a Star Piece before claiming the rewards." },
-  { id: 77, en: "Curveball", jp: "カーブボール", category: "Action", example: "A Curveball gives you an extra capture bonus." },
-  { id: 78, en: "Adventure Sync", jp: "いつでも冒険モード", category: "Basic", example: "Don't forget to turn on Adventure Sync." },
-  { id: 79, en: "GO Battle League", jp: "GOバトルリーグ", category: "Event", example: "Are you playing the GO Battle League today?" },
-  { id: 80, en: "Great League", jp: "スーパーリーグ", category: "Battle", example: "What's the meta for the Great League right now?" },
-  { id: 81, en: "Ultra League", jp: "ハイパーリーグ", category: "Battle", example: "Talonflame is great in the Ultra League." },
-  { id: 82, en: "Master League", jp: "マスターリーグ", category: "Battle", example: "Master League has no CP limit." },
-  { id: 83, en: "Meta", jp: "環境(よく使われる強いポケモン)", category: "Battle", example: "Swampert is always in the meta." },
-  { id: 84, en: "Photobomb", jp: "写り込み", category: "Action", example: "I got a Photobomb from Smeargle!" },
-  { id: 85, en: "GO Snapshot", jp: "GOスナップショット", category: "Basic", example: "Take a GO Snapshot of your buddy." },
-  { id: 86, en: "Showcase", jp: "おひろめ", category: "Event", example: "I placed my biggest Snorlax in the Showcase." },
-  { id: 87, en: "Route", jp: "ルート", category: "Map", example: "Let's follow this Route to find Zygarde Cells." },
-  { id: 88, en: "Zygarde Cell", jp: "ジガルデ・セル", category: "Item", example: "You can find a Zygarde Cell near the end of a Route." },
-  { id: 89, en: "Party Play", jp: "チームコラボ", category: "Action", example: "Join my party for Party Play!" },
-  { id: 90, en: "Research Breakthrough", jp: "大発見", category: "Event", example: "I got a shiny from the Research Breakthrough." },
-  { id: 91, en: "Primal Reversion", jp: "ゲンシカイキ", category: "Action", example: "Primal Reversion is similar to Mega Evolution." },
-  { id: 92, en: "Evolution Item", jp: "進化アイテム", category: "Item", example: "You need an evolution item like a Sinnoh Stone." }
-];
-
-const phraseData = [
-  { id: 1, en: "Let's do a raid together!", jp: "一緒にレイドをやろう！", situation: "Battle" },
-  { id: 2, en: "Did you catch anything good?", jp: "何かいいの捕まえた？", situation: "Meeting" },
-  { id: 3, en: "I'm looking for a shiny Pikachu.", jp: "色違いのピカチュウを探してるんだ。", situation: "Trading" },
-  { id: 4, en: "Can you invite me to the remote raid?", jp: "リモートレイドに招待してくれない？", situation: "Battle" },
-  { id: 5, en: "I ran out of Poké Balls.", jp: "モンスターボールがなくなっちゃった。", situation: "Trouble" },
-  { id: 6, en: "What team are you on?", jp: "何色チームですか？", situation: "Meeting" },
-  { id: 7, en: "Send me a gift, please.", jp: "ギフトを送って。", situation: "Friend" },
-  { id: 8, en: "It ran away...", jp: "逃げられちゃった…", situation: "Trouble" },
-  { id: 9, en: "Wow, it's a hundred percent!", jp: "うわ、個体値100だ！", situation: "Excitement" },
-  { id: 10, en: "Are you going to the park for Community Day?", jp: "コミュニティ・デイは公園に行く？", situation: "Event" },
-  { id: 11, en: "Is this area a good place to grind?", jp: "このエリアはポケ活(周回)するのにいい場所？", situation: "Meeting" },
-  { id: 12, en: "I finally got a Shundo from a raid!", jp: "ついにレイドで色違い100%をゲットしたよ！", situation: "Excitement" },
-  { id: 13, en: "Don't use Aggron in raids, its DPS is too low.", jp: "ボスゴドラをレイドで使わないで、DPSが低すぎるから。", situation: "Battle" },
-  { id: 14, en: "Do you have any regional Pokémon for trade?", jp: "交換できる地域限定ポケモン持ってる？", situation: "Trading" },
-  { id: 15, en: "That Gym is always taken by spoofers.", jp: "あのジムはいつも位置偽装者に占拠されてるんだ。", situation: "Trouble" },
-  { id: 16, en: "I'm almost level 50, just need a little more XP.", jp: "もうすぐレベル50だ、あと少し経験値が必要なんだ。", situation: "Friend" },
-  { id: 17, en: "Are we doing a Lucky Trade?", jp: "キラ交換にする？", situation: "Trading" },
-  { id: 18, en: "Make sure your Pokémon have STAB moves.", jp: "ポケモンがタイプ一致技を持ってるか確認してね。", situation: "Battle" },
-  { id: 19, en: "This park turns into a Magikarp nest next week.", jp: "この公園、来週はコイキングの巣になるよ。", situation: "Event" },
-  { id: 20, en: "He spends so much on incubators, he's a total whale.", jp: "彼、孵化装置にすごいお金かけてるね。完全な重課金勢だよ。", situation: "Meeting" },
-  { id: 21, en: "Use a Pinap Berry to get more candy.", jp: "アメを多くもらうためにパイルのみを使おう。", situation: "Advice" },
-  { id: 22, en: "What's the CP of your highest Pokémon?", jp: "君の一番CPが高いポケモンは何？", situation: "Meeting" },
-  { id: 23, en: "I need to spin some PokéStops for revives.", jp: "げんきのかけらが欲しいからポケストップを回さないと。", situation: "Action" },
-  { id: 24, en: "Did you finish the new Special Research?", jp: "新しいスペシャルリサーチは終わった？", situation: "Meeting" },
-  { id: 25, en: "Catch it while it has a Weather Boost!", jp: "天候ブーストがかかってるうちに捕まえよう！", situation: "Advice" },
-  { id: 26, en: "Use a Lucky Egg right before you evolve several Pokémon.", jp: "複数のポケモンを進化させる直前にしあわせタマゴを使おう。", situation: "Advice" },
-  { id: 27, en: "You can only use a potion if the Pokémon has not fainted.", jp: "ポケモンがひんし状態ではない場合にだけ、キズぐすりを使えるよ。", situation: "Advice" },
-  { id: 28, en: "How many PokéCoins do you have?", jp: "ポケコインをいくら持ってる？", situation: "Meeting" },
-  { id: 29, en: "I need to walk to hatch this egg.", jp: "このタマゴを孵化させるために歩かなくちゃ。", situation: "Action" },
-  { id: 30, en: "Check your Pokédex for more information.", jp: "詳しい情報はポケモン図鑑をチェックして。", situation: "Advice" },
-  { id: 31, en: "A wild Pokémon appeared nearby!", jp: "近くに野生のポケモンが現れたよ！", situation: "Excitement" },
-  { id: 32, en: "I used an Ultra Ball, but it still ran away.", jp: "ハイパーボールを使ったのに逃げられちゃった。", situation: "Trouble" },
-  { id: 33, en: "I need more Mega Energy to mega evolve it.", jp: "メガシンカさせるのにメガエナジーがもっと必要だ。", situation: "Battle" },
-  { id: 34, en: "Did you beat the Team GO Rocket Leader?", jp: "GOロケット団のリーダーは倒した？", situation: "Meeting" },
-  { id: 35, en: "My item bag is full, I need to upgrade it.", jp: "アイテムボックスがいっぱいだ、拡張しなきゃ。", situation: "Trouble" },
-  { id: 36, en: "Are you playing the GO Battle League today?", jp: "今日はGOバトルリーグをやる？", situation: "Meeting" },
-  { id: 37, en: "What's the meta for the Great League right now?", jp: "今のスーパーリーグの環境はどうなってる？", situation: "Battle" },
-  { id: 38, en: "Don't forget to turn on Adventure Sync.", jp: "いつでも冒険モードをオンにするのを忘れないで。", situation: "Advice" },
-  { id: 39, en: "I got a Photobomb from Smeargle!", jp: "ドーブルが写り込んだ！", situation: "Excitement" },
-  { id: 40, en: "Let's follow this Route to find Zygarde Cells.", jp: "このルートを歩いてジガルデ・セルを見つけよう。", situation: "Action" },
-  { id: 41, en: "Join my party for Party Play!", jp: "チームコラボのために私のチームに入って！", situation: "Friend" },
-  { id: 42, en: "I placed my biggest Snorlax in the Showcase.", jp: "一番大きいカビゴンをおひろめに出したよ。", situation: "Event" },
-  { id: 43, en: "Make sure to use a Star Piece before claiming the rewards.", jp: "報酬を受け取る前にほしのかけらを使うのを忘れないようにね。", situation: "Advice" },
-  { id: 44, en: "Purified Pokémon cost less Stardust to power up.", jp: "リトレーンしたポケモンは強化に必要なほしのすなが少なくて済むよ。", situation: "Advice" },
-  { id: 45, en: "You should dodge the Charged Attack!", jp: "相手のスペシャルアタックは避けたほうがいいよ！", situation: "Battle" },
-  { id: 46, en: "I only have one Remote Raid Pass left.", jp: "リモートレイドパスがもう1枚しかないんだ。", situation: "Trouble" },
-  { id: 47, en: "Give your buddy a Poffin to make it excited.", jp: "相棒を大喜びさせるためにポフィンをあげて。", situation: "Advice" },
-  { id: 48, en: "You need an evolution item like a Sinnoh Stone.", jp: "シンオウのいしのような進化アイテムが必要だよ。", situation: "Advice" }
-];
-
-// --- メインコンポーネント ---
-
-export default function App() {
-  const [currentView, setCurrentView] = useState('home'); // 'home', 'vocab', 'phrases', 'quiz'
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PokeEnglish</title>
   
-  // テキスト読み上げ関数
-  const speakText = useCallback((text) => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'en-US';
-      utterance.rate = 0.9;
-      window.speechSynthesis.speak(utterance);
-    } else {
-      alert('お使いのブラウザは音声読み上げに対応していません。');
+  <!-- Tailwind CSS (デザイン用) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- FontAwesome (アイコン用) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- React本体とBabel (ブラウザでReactを動かすための機能) -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <style>
+    /* スクロールバーを非表示にする設定 */
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
     }
-  }, []);
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-100">
+  <!-- Reactアプリが描画される場所 -->
+  <div id="root"></div>
 
-  const renderHeader = (title, showBack = true) => (
-    <div className="bg-blue-600 text-white p-4 flex items-center shadow-md sticky top-0 z-10">
-      {showBack && (
-        <button onClick={() => setCurrentView('home')} className="mr-3 hover:bg-blue-700 p-1 rounded-full transition-colors">
-          <ArrowLeft size={24} />
-        </button>
-      )}
-      <h1 className="text-xl font-bold flex-1 text-center pr-8">{title}</h1>
-    </div>
-  );
+  <!-- アプリのコード本体 -->
+  <script type="text/babel">
+    const { useState, useEffect, useCallback } = React;
+    const { createRoot } = ReactDOM;
 
-  return (
-    <div className="min-h-screen bg-slate-100 flex justify-center">
-      <div className="w-full max-w-md bg-white shadow-xl min-h-screen relative overflow-hidden flex flex-col">
-        {currentView === 'home' && <HomeView setView={setCurrentView} />}
-        {currentView === 'vocab' && (
-          <>
-            {renderHeader('単語帳 (Vocabulary)')}
-            <VocabView speak={speakText} />
-          </>
-        )}
-        {currentView === 'phrases' && (
-          <>
-            {renderHeader('フレーズ集 (Phrases)')}
-            <PhraseView speak={speakText} />
-          </>
-        )}
-        {currentView === 'quiz' && (
-          <>
-            {renderHeader('クイズに挑戦！')}
-            <QuizView setView={setCurrentView} />
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
+    // --- モックデータ ---
 
-// --- ホーム画面コンポーネント ---
+    const vocabularyData = [
+      { id: 1, en: "PokéStop", jp: "ポケストップ", category: "Basic", example: "Spin the PokéStop." },
+      { id: 2, en: "Gym", jp: "ジム", category: "Basic", example: "Let's take down this Gym." },
+      { id: 3, en: "Raid Battle", jp: "レイドバトル", category: "Battle", example: "A level 5 Raid Battle is starting." },
+      { id: 4, en: "Shiny", jp: "色違い", category: "Pokémon", example: "I finally caught a Shiny!" },
+      { id: 5, en: "Hundo (100% IV)", jp: "個体値100%", category: "Pokémon", example: "Is it a Hundo?" },
+      { id: 6, en: "Trade", jp: "交換", category: "Action", example: "Do you want to trade?" },
+      { id: 7, en: "Catch", jp: "捕まえる", category: "Action", example: "Catch 'em all!" },
+      { id: 8, en: "Hatch", jp: "孵化させる", category: "Action", example: "My egg is about to hatch." },
+      { id: 9, en: "Evolve", jp: "進化させる", category: "Action", example: "I have enough candy to evolve it." },
+      { id: 10, en: "Transfer", jp: "博士に送る", category: "Action", example: "Transfer low IV Pokémon." },
+      { id: 11, en: "Excellent Throw", jp: "エクセレントスロー", category: "Action", example: "Nice Excellent Throw!" },
+      { id: 12, en: "Raid Pass", jp: "レイドパス", category: "Item", example: "Use your daily Raid Pass." },
+      { id: 13, en: "Stardust", jp: "ほしのすな", category: "Item", example: "I need more Stardust to power up." },
+      { id: 14, en: "Lure Module", jp: "ルアーモジュール", category: "Item", example: "Someone dropped a Lure Module." },
+      { id: 15, en: "Community Day", jp: "コミュニティ・デイ", category: "Event", example: "Are you ready for Community Day?" },
+      { id: 16, en: "Shundo", jp: "個体値100%の色違い", category: "Pokémon", example: "I caught my first Shundo today!" },
+      { id: 17, en: "Nundo", jp: "個体値0%", category: "Pokémon", example: "Nundos are rarer than Hundos." },
+      { id: 18, en: "Spoofer", jp: "位置偽装者", category: "Player", example: "Report the spoofer in that Gym." },
+      { id: 19, en: "Whale", jp: "重課金プレイヤー", category: "Player", example: "He buys every ticket, what a whale." },
+      { id: 20, en: "Alt account", jp: "サブ垢", category: "Player", example: "I use my alt account for trading." },
+      { id: 21, en: "STAB", jp: "タイプ一致ボーナス", category: "Battle", example: "Use water moves for STAB." },
+      { id: 22, en: "DPS", jp: "1秒あたりのダメージ", category: "Battle", example: "Mewtwo has very high DPS." },
+      { id: 23, en: "Tanky", jp: "耐久力が高い", category: "Battle", example: "Blissey is too tanky to defeat alone." },
+      { id: 24, en: "Squishy", jp: "耐久力が低い", category: "Battle", example: "Gengar hits hard but is very squishy." },
+      { id: 25, en: "Nest", jp: "ポケモンの巣", category: "Map", example: "This park is a Pikachu nest." },
+      { id: 26, en: "Biome", jp: "バイオーム(出現環境)", category: "Map", example: "Water Pokémon spawn in this biome." },
+      { id: 27, en: "Pseudo-Legendary", jp: "600族(種族値が高いポケモン)", category: "Pokémon", example: "Dragonite is a Pseudo-Legendary." },
+      { id: 28, en: "Regional", jp: "地域限定ポケモン", category: "Pokémon", example: "Tauros is a regional in North America." },
+      { id: 29, en: "Lucky", jp: "キラポケモン", category: "Pokémon", example: "Let's trade to get a Lucky Pokémon." },
+      { id: 30, en: "Best Buddy", jp: "最高の相棒", category: "Friend", example: "My Charizard is now a Best Buddy." },
+      { id: 31, en: "Grind", jp: "周回する・集中的にプレイする", category: "Action", example: "I need to grind Stardust." },
+      { id: 32, en: "CP (Combat Power)", jp: "CP (総合的な強さ)", category: "Basic", example: "What's the CP of that Dragonite?" },
+      { id: 33, en: "IV (Individual Values)", jp: "個体値", category: "Basic", example: "You should check its IVs before evolving." },
+      { id: 34, en: "Candy", jp: "アメ", category: "Item", example: "I need 400 Magikarp candy." },
+      { id: 35, en: "Incense", jp: "おこう", category: "Item", example: "Pop an incense to attract more Pokémon." },
+      { id: 36, en: "Potion", jp: "キズぐすり", category: "Item", example: "Use a potion to heal your Pokémon." },
+      { id: 37, en: "Revive", jp: "げんきのかけら", category: "Item", example: "Do you have any revives left?" },
+      { id: 38, en: "Razz Berry", jp: "ズリのみ", category: "Item", example: "Feed it a Razz Berry to make it easier to catch." },
+      { id: 39, en: "Pinap Berry", jp: "パイルのみ", category: "Item", example: "Always use a Pinap Berry on rare Pokémon." },
+      { id: 40, en: "Golden Razz Berry", jp: "きんのズリのみ", category: "Item", example: "Save your Golden Razz Berries for raid bosses." },
+      { id: 41, en: "Field Research", jp: "フィールドリサーチ", category: "Event", example: "Complete a Field Research task every day." },
+      { id: 42, en: "Special Research", jp: "スペシャルリサーチ", category: "Event", example: "The Mew Special Research is fun." },
+      { id: 43, en: "Incubator", jp: "ふかそうち", category: "Item", example: "Put the 10km egg in the Super Incubator." },
+      { id: 44, en: "Appraisal", jp: "チームリーダーの評価", category: "Basic", example: "The appraisal says it's a three-star." },
+      { id: 45, en: "Weather Boost", jp: "天候ブースト", category: "Battle", example: "Fire types have a weather boost today." },
+      { id: 46, en: "Faint", jp: "ひんしになる", category: "Battle", example: "My entire team fainted." },
+      { id: 47, en: "Poké Ball", jp: "モンスターボール", category: "Item", example: "Throw a Poké Ball." },
+      { id: 48, en: "Great Ball", jp: "スーパーボール", category: "Item", example: "Great Balls have a higher capture rate." },
+      { id: 49, en: "Ultra Ball", jp: "ハイパーボール", category: "Item", example: "Use an Ultra Ball for rare Pokémon." },
+      { id: 50, en: "Master Ball", jp: "マスターボール", category: "Item", example: "Master Ball captures Pokémon every time." },
+      { id: 51, en: "Egg", jp: "タマゴ", category: "Item", example: "Put the egg in an incubator." },
+      { id: 52, en: "Lucky Egg", jp: "しあわせタマゴ", category: "Item", example: "Lucky Egg doubles your XP for 30 minutes." },
+      { id: 53, en: "Super Potion", jp: "いいキズぐすり", category: "Item", example: "Restore 50 HP with a Super Potion." },
+      { id: 54, en: "Pokédex", jp: "ポケモン図鑑", category: "Basic", example: "I registered a new Pokémon to my Pokédex." },
+      { id: 55, en: "PokéCoin", jp: "ポケコイン", category: "Item", example: "You can buy items with PokéCoins." },
+      { id: 56, en: "Experience Points (XP)", jp: "経験値", category: "Basic", example: "You need more XP to level up." },
+      { id: 57, en: "Medal", jp: "メダル", category: "Basic", example: "I earned a new gold medal." },
+      { id: 58, en: "Power-up", jp: "強化する", category: "Action", example: "Power-up your Pokémon using Stardust." },
+      { id: 59, en: "Defender Bonus", jp: "防衛ボーナス", category: "Basic", example: "Claim your Defender Bonus in the shop." },
+      { id: 60, en: "Wild Pokémon", jp: "野生のポケモン", category: "Pokémon", example: "A wild Pikachu appeared!" },
+      { id: 61, en: "Trainer", jp: "トレーナー", category: "Player", example: "Are you a Pokémon Trainer?" },
+      { id: 62, en: "Prestige", jp: "名声(旧ジムシステム)", category: "Basic", example: "Increase the Gym's prestige." },
+      { id: 63, en: "Fast Attack", jp: "ノーマルアタック", category: "Battle", example: "Tap the screen to use a Fast Attack." },
+      { id: 64, en: "Charged Attack", jp: "スペシャルアタック", category: "Battle", example: "You should dodge the Charged Attack!" },
+      { id: 65, en: "Dodge", jp: "避ける", category: "Battle", example: "Swipe left or right to dodge." },
+      { id: 66, en: "Purify", jp: "リトレーンする", category: "Action", example: "Should I purify this Shadow Pokémon?" },
+      { id: 67, en: "Shadow Pokémon", jp: "シャドウポケモン", category: "Pokémon", example: "Shadow Pokémon deal more damage." },
+      { id: 68, en: "Team GO Rocket", jp: "GOロケット団", category: "NPC", example: "Defeat Team GO Rocket Grunts." },
+      { id: 69, en: "Mega Evolution", jp: "メガシンカ", category: "Action", example: "Mega Evolution lasts for 8 hours." },
+      { id: 70, en: "Mega Energy", jp: "メガエナジー", category: "Item", example: "I need more Mega Energy to mega evolve it." },
+      { id: 71, en: "Remote Raid Pass", jp: "リモートレイドパス", category: "Item", example: "I only have one Remote Raid Pass left." },
+      { id: 72, en: "Premium Battle Pass", jp: "プレミアムバトルパス", category: "Item", example: "Use a Premium Battle Pass for better rewards." },
+      { id: 73, en: "Poffin", jp: "ポフィン", category: "Item", example: "Give your buddy a Poffin to make it excited." },
+      { id: 74, en: "Max Potion", jp: "まんたんのくすり", category: "Item", example: "Max Potion fully restores HP." },
+      { id: 75, en: "Max Revive", jp: "げんきのかたまり", category: "Item", example: "Use a Max Revive during the raid." },
+      { id: 76, en: "Star Piece", jp: "ほしのかけら", category: "Item", example: "Make sure to use a Star Piece before claiming the rewards." },
+      { id: 77, en: "Curveball", jp: "カーブボール", category: "Action", example: "A Curveball gives you an extra capture bonus." },
+      { id: 78, en: "Adventure Sync", jp: "いつでも冒険モード", category: "Basic", example: "Don't forget to turn on Adventure Sync." },
+      { id: 79, en: "GO Battle League", jp: "GOバトルリーグ", category: "Event", example: "Are you playing the GO Battle League today?" },
+      { id: 80, en: "Great League", jp: "スーパーリーグ", category: "Battle", example: "What's the meta for the Great League right now?" },
+      { id: 81, en: "Ultra League", jp: "ハイパーリーグ", category: "Battle", example: "Talonflame is great in the Ultra League." },
+      { id: 82, en: "Master League", jp: "マスターリーグ", category: "Battle", example: "Master League has no CP limit." },
+      { id: 83, en: "Meta", jp: "環境(よく使われる強いポケモン)", category: "Battle", example: "Swampert is always in the meta." },
+      { id: 84, en: "Photobomb", jp: "写り込み", category: "Action", example: "I got a Photobomb from Smeargle!" },
+      { id: 85, en: "GO Snapshot", jp: "GOスナップショット", category: "Basic", example: "Take a GO Snapshot of your buddy." },
+      { id: 86, en: "Showcase", jp: "おひろめ", category: "Event", example: "I placed my biggest Snorlax in the Showcase." },
+      { id: 87, en: "Route", jp: "ルート", category: "Map", example: "Let's follow this Route to find Zygarde Cells." },
+      { id: 88, en: "Zygarde Cell", jp: "ジガルデ・セル", category: "Item", example: "You can find a Zygarde Cell near the end of a Route." },
+      { id: 89, en: "Party Play", jp: "チームコラボ", category: "Action", example: "Join my party for Party Play!" },
+      { id: 90, en: "Research Breakthrough", jp: "大発見", category: "Event", example: "I got a shiny from the Research Breakthrough." },
+      { id: 91, en: "Primal Reversion", jp: "ゲンシカイキ", category: "Action", example: "Primal Reversion is similar to Mega Evolution." },
+      { id: 92, en: "Evolution Item", jp: "進化アイテム", category: "Item", example: "You need an evolution item like a Sinnoh Stone." }
+    ];
 
-function HomeView({ setView }) {
-  return (
-    <div className="flex flex-col h-full">
-      <div className="bg-blue-600 text-white pt-12 pb-8 px-6 rounded-b-3xl shadow-lg">
-        <div className="flex items-center justify-center mb-4">
-          <div className="w-16 h-16 bg-red-500 rounded-full border-4 border-white flex items-center justify-center shadow-inner relative overflow-hidden">
-             <div className="w-full h-1/2 bg-red-500 absolute top-0"></div>
-             <div className="w-full h-1/2 bg-white absolute bottom-0"></div>
-             <div className="w-full h-1 bg-gray-800 absolute top-1/2 -mt-[2px]"></div>
-             <div className="w-4 h-4 bg-white rounded-full border-[2px] border-gray-800 z-10"></div>
-          </div>
-        </div>
-        <h1 className="text-3xl font-extrabold text-center tracking-wider">PokeEnglish</h1>
-        <p className="text-center text-blue-100 mt-2 text-sm">ポケモンGOで使える英語を学ぼう！</p>
-      </div>
+    const phraseData = [
+      { id: 1, en: "Let's do a raid together!", jp: "一緒にレイドをやろう！", situation: "Battle" },
+      { id: 2, en: "Did you catch anything good?", jp: "何かいいの捕まえた？", situation: "Meeting" },
+      { id: 3, en: "I'm looking for a shiny Pikachu.", jp: "色違いのピカチュウを探してるんだ。", situation: "Trading" },
+      { id: 4, en: "Can you invite me to the remote raid?", jp: "リモートレイドに招待してくれない？", situation: "Battle" },
+      { id: 5, en: "I ran out of Poké Balls.", jp: "モンスターボールがなくなっちゃった。", situation: "Trouble" },
+      { id: 6, en: "What team are you on?", jp: "何色チームですか？", situation: "Meeting" },
+      { id: 7, en: "Send me a gift, please.", jp: "ギフトを送って。", situation: "Friend" },
+      { id: 8, en: "It ran away...", jp: "逃げられちゃった…", situation: "Trouble" },
+      { id: 9, en: "Wow, it's a hundred percent!", jp: "うわ、個体値100だ！", situation: "Excitement" },
+      { id: 10, en: "Are you going to the park for Community Day?", jp: "コミュニティ・デイは公園に行く？", situation: "Event" },
+      { id: 11, en: "Is this area a good place to grind?", jp: "このエリアはポケ活(周回)するのにいい場所？", situation: "Meeting" },
+      { id: 12, en: "I finally got a Shundo from a raid!", jp: "ついにレイドで色違い100%をゲットしたよ！", situation: "Excitement" },
+      { id: 13, en: "Don't use Aggron in raids, its DPS is too low.", jp: "ボスゴドラをレイドで使わないで、DPSが低すぎるから。", situation: "Battle" },
+      { id: 14, en: "Do you have any regional Pokémon for trade?", jp: "交換できる地域限定ポケモン持ってる？", situation: "Trading" },
+      { id: 15, en: "That Gym is always taken by spoofers.", jp: "あのジムはいつも位置偽装者に占拠されてるんだ。", situation: "Trouble" },
+      { id: 16, en: "I'm almost level 50, just need a little more XP.", jp: "もうすぐレベル50だ、あと少し経験値が必要なんだ。", situation: "Friend" },
+      { id: 17, en: "Are we doing a Lucky Trade?", jp: "キラ交換にする？", situation: "Trading" },
+      { id: 18, en: "Make sure your Pokémon have STAB moves.", jp: "ポケモンがタイプ一致技を持ってるか確認してね。", situation: "Battle" },
+      { id: 19, en: "This park turns into a Magikarp nest next week.", jp: "この公園、来週はコイキングの巣になるよ。", situation: "Event" },
+      { id: 20, en: "He spends so much on incubators, he's a total whale.", jp: "彼、孵化装置にすごいお金かけてるね。完全な重課金勢だよ。", situation: "Meeting" },
+      { id: 21, en: "Use a Pinap Berry to get more candy.", jp: "アメを多くもらうためにパイルのみを使おう。", situation: "Advice" },
+      { id: 22, en: "What's the CP of your highest Pokémon?", jp: "君の一番CPが高いポケモンは何？", situation: "Meeting" },
+      { id: 23, en: "I need to spin some PokéStops for revives.", jp: "げんきのかけらが欲しいからポケストップを回さないと。", situation: "Action" },
+      { id: 24, en: "Did you finish the new Special Research?", jp: "新しいスペシャルリサーチは終わった？", situation: "Meeting" },
+      { id: 25, en: "Catch it while it has a Weather Boost!", jp: "天候ブーストがかかってるうちに捕まえよう！", situation: "Advice" },
+      { id: 26, en: "Use a Lucky Egg right before you evolve several Pokémon.", jp: "複数のポケモンを進化させる直前にしあわせタマゴを使おう。", situation: "Advice" },
+      { id: 27, en: "You can only use a potion if the Pokémon has not fainted.", jp: "ポケモンがひんし状態ではない場合にだけ、キズぐすりを使えるよ。", situation: "Advice" },
+      { id: 28, en: "How many PokéCoins do you have?", jp: "ポケコインをいくら持ってる？", situation: "Meeting" },
+      { id: 29, en: "I need to walk to hatch this egg.", jp: "このタマゴを孵化させるために歩かなくちゃ。", situation: "Action" },
+      { id: 30, en: "Check your Pokédex for more information.", jp: "詳しい情報はポケモン図鑑をチェックして。", situation: "Advice" },
+      { id: 31, en: "A wild Pokémon appeared nearby!", jp: "近くに野生のポケモンが現れたよ！", situation: "Excitement" },
+      { id: 32, en: "I used an Ultra Ball, but it still ran away.", jp: "ハイパーボールを使ったのに逃げられちゃった。", situation: "Trouble" },
+      { id: 33, en: "I need more Mega Energy to mega evolve it.", jp: "メガシンカさせるのにメガエナジーがもっと必要だ。", situation: "Battle" },
+      { id: 34, en: "Did you beat the Team GO Rocket Leader?", jp: "GOロケット団のリーダーは倒した？", situation: "Meeting" },
+      { id: 35, en: "My item bag is full, I need to upgrade it.", jp: "アイテムボックスがいっぱいだ、拡張しなきゃ。", situation: "Trouble" },
+      { id: 36, en: "Are you playing the GO Battle League today?", jp: "今日はGOバトルリーグをやる？", situation: "Meeting" },
+      { id: 37, en: "What's the meta for the Great League right now?", jp: "今のスーパーリーグの環境はどうなってる？", situation: "Battle" },
+      { id: 38, en: "Don't forget to turn on Adventure Sync.", jp: "いつでも冒険モードをオンにするのを忘れないで。", situation: "Advice" },
+      { id: 39, en: "I got a Photobomb from Smeargle!", jp: "ドーブルが写り込んだ！", situation: "Excitement" },
+      { id: 40, en: "Let's follow this Route to find Zygarde Cells.", jp: "このルートを歩いてジガルデ・セルを見つけよう。", situation: "Action" },
+      { id: 41, en: "Join my party for Party Play!", jp: "チームコラボのために私のチームに入って！", situation: "Friend" },
+      { id: 42, en: "I placed my biggest Snorlax in the Showcase.", jp: "一番大きいカビゴンをおひろめに出したよ。", situation: "Event" },
+      { id: 43, en: "Make sure to use a Star Piece before claiming the rewards.", jp: "報酬を受け取る前にほしのかけらを使うのを忘れないようにね。", situation: "Advice" },
+      { id: 44, en: "Purified Pokémon cost less Stardust to power up.", jp: "リトレーンしたポケモンは強化に必要なほしのすなが少なくて済むよ。", situation: "Advice" },
+      { id: 45, en: "You should dodge the Charged Attack!", jp: "相手のスペシャルアタックは避けたほうがいいよ！", situation: "Battle" },
+      { id: 46, en: "I only have one Remote Raid Pass left.", jp: "リモートレイドパスがもう1枚しかないんだ。", situation: "Trouble" },
+      { id: 47, en: "Give your buddy a Poffin to make it excited.", jp: "相棒を大喜びさせるためにポフィンをあげて。", situation: "Advice" },
+      { id: 48, en: "You need an evolution item like a Sinnoh Stone.", jp: "シンオウのいしのような進化アイテムが必要だよ。", situation: "Advice" }
+    ];
 
-      <div className="flex-1 p-6 flex flex-col gap-5 justify-center">
-        <MenuButton 
-          icon={<BookOpen size={28} />} 
-          title="単語を学ぶ" 
-          subtitle="ゲーム内の用語を英語でチェック"
-          color="bg-emerald-500"
-          onClick={() => setView('vocab')}
-        />
-        <MenuButton 
-          icon={<MessageCircle size={28} />} 
-          title="フレーズを学ぶ" 
-          subtitle="レイドや交換で使える会話表現"
-          color="bg-amber-500"
-          onClick={() => setView('phrases')}
-        />
-        <MenuButton 
-          icon={<Gamepad2 size={28} />} 
-          title="クイズに挑戦" 
-          subtitle="TOEIC形式や単語テストに挑戦"
-          color="bg-rose-500"
-          onClick={() => setView('quiz')}
-        />
-        <MenuButton 
-          icon={<ExternalLink size={28} />} 
-          title="ポケモン発音アプリ" 
-          subtitle="ポケモンの英語名を練習 (外部サイト)"
-          color="bg-violet-500"
-          onClick={() => window.open('https://kenkenpa5678.github.io/Pokemon-Pronunciation/', '_blank', 'noopener,noreferrer')}
-        />
-      </div>
+    // --- 各種コンポーネント ---
 
-      <div className="p-4 text-center text-xs text-gray-400">
-        ※このアプリは非公式の学習用ツールです。
-      </div>
-    </div>
-  );
-}
+    function App() {
+      const [currentView, setCurrentView] = useState('home');
+      
+      const speakText = useCallback((text) => {
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = 'en-US';
+          utterance.rate = 0.9;
+          window.speechSynthesis.speak(utterance);
+        } else {
+          alert('お使いのブラウザは音声読み上げに対応していません。');
+        }
+      }, []);
 
-function MenuButton({ icon, title, subtitle, color, onClick }) {
-  return (
-    <button 
-      onClick={onClick}
-      className={`${color} text-white p-5 rounded-2xl shadow-md hover:opacity-90 transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center gap-4 text-left`}
-    >
-      <div className="bg-white/20 p-3 rounded-xl">
-        {icon}
-      </div>
-      <div>
-        <h2 className="text-xl font-bold">{title}</h2>
-        <p className="text-sm opacity-90">{subtitle}</p>
-      </div>
-    </button>
-  );
-}
-
-// --- リストアイテム用サブコンポーネント ---
-
-function VocabItem({ item, speak, isMemoMode }) {
-  const [revealed, setRevealed] = useState(false);
-
-  useEffect(() => {
-    setRevealed(false);
-  }, [isMemoMode]);
-
-  return (
-    <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-      <div className="flex justify-between items-start mb-2">
-        <div className="flex-1 pr-4">
-          <h3 className="text-lg font-bold text-gray-800">{item.en}</h3>
-          {isMemoMode && !revealed ? (
-            <button 
-              onClick={() => setRevealed(true)}
-              className="mt-1 bg-gray-200 text-gray-500 rounded px-3 py-1 text-sm font-medium hover:bg-blue-100 hover:text-blue-600 transition-colors"
-            >
-              タップして意味を表示
+      const renderHeader = (title, showBack = true) => (
+        <div className="bg-blue-600 text-white p-4 flex items-center shadow-md sticky top-0 z-10">
+          {showBack && (
+            <button onClick={() => setCurrentView('home')} className="mr-3 hover:bg-blue-700 p-1 rounded-full transition-colors">
+              <i className="fas fa-arrow-left text-[24px]"></i>
             </button>
-          ) : (
-            <p className="text-md text-blue-600 font-medium">{item.jp}</p>
           )}
+          <h1 className="text-xl font-bold flex-1 text-center pr-8">{title}</h1>
         </div>
-        <button 
-          onClick={() => speak(item.en)}
-          className="p-2 text-gray-400 hover:text-blue-500 bg-gray-50 rounded-full hover:bg-blue-50 transition-colors shrink-0"
-        >
-          <Volume2 size={20} />
-        </button>
-      </div>
-      <div className="mt-3 pt-3 border-t border-gray-50">
-        <p className="text-xs text-gray-500 mb-1">例文:</p>
-        <p className="text-sm text-gray-700 italic flex items-center justify-between">
-          "{item.example}"
-          <button onClick={() => speak(item.example)} className="text-gray-400 p-1 shrink-0">
-             <Volume2 size={14} />
-          </button>
-        </p>
-      </div>
-    </div>
-  );
-}
+      );
 
-function PhraseItem({ phrase, speak, isMemoMode }) {
-  const [revealed, setRevealed] = useState(false);
-
-  useEffect(() => {
-    setRevealed(false);
-  }, [isMemoMode]);
-
-  return (
-    <div className="bg-white rounded-xl shadow-sm border-l-4 border-amber-400 overflow-hidden">
-      <div className="p-4">
-        <div className="flex justify-between items-start gap-2">
-          <div className="flex-1 pr-2">
-            <span className="inline-block px-2 py-0.5 bg-gray-100 text-gray-500 text-xs font-semibold rounded mb-2">
-              {phrase.situation}
-            </span>
-            <h3 className="text-lg font-bold text-gray-800 leading-tight mb-2">{phrase.en}</h3>
-            {isMemoMode && !revealed ? (
-              <button 
-                onClick={() => setRevealed(true)}
-                className="bg-gray-200 text-gray-500 rounded px-3 py-1 text-sm font-medium hover:bg-amber-100 hover:text-amber-700 transition-colors"
-              >
-                タップして意味を表示
-              </button>
-            ) : (
-              <p className="text-gray-600 text-sm">{phrase.jp}</p>
+      return (
+        <div className="min-h-screen bg-slate-100 flex justify-center">
+          <div className="w-full max-w-md bg-white shadow-xl min-h-screen relative overflow-hidden flex flex-col">
+            {currentView === 'home' && <HomeView setView={setCurrentView} />}
+            {currentView === 'vocab' && (
+              <>
+                {renderHeader('単語帳 (Vocabulary)')}
+                <VocabView speak={speakText} />
+              </>
+            )}
+            {currentView === 'phrases' && (
+              <>
+                {renderHeader('フレーズ集 (Phrases)')}
+                <PhraseView speak={speakText} />
+              </>
+            )}
+            {currentView === 'quiz' && (
+              <>
+                {renderHeader('クイズに挑戦！')}
+                <QuizView setView={setCurrentView} />
+              </>
             )}
           </div>
-          <button 
-            onClick={() => speak(phrase.en)}
-            className="p-3 bg-amber-50 text-amber-600 rounded-full hover:bg-amber-100 transition-colors shrink-0"
-          >
-            <Volume2 size={24} />
-          </button>
         </div>
-      </div>
-    </div>
-  );
-}
-
-// --- 単語帳・フレーズ集コンポーネント (変更なし) ---
-
-function VocabView({ speak }) {
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [isMemoMode, setIsMemoMode] = useState(false);
-  
-  const categories = ['All', ...new Set(vocabularyData.map(item => item.category))];
-  const filteredData = activeCategory === 'All' ? vocabularyData : vocabularyData.filter(item => item.category === activeCategory);
-
-  return (
-    <div className="flex-1 overflow-y-auto bg-slate-50 flex flex-col">
-      <div className="flex items-center p-3 gap-2 bg-white shadow-sm sticky top-0 z-10">
-        <div className="flex overflow-x-auto gap-2 hide-scrollbar flex-1">
-          {categories.map(cat => (
-            <button key={cat} onClick={() => setActiveCategory(cat)} className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${activeCategory === cat ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-              {cat}
-            </button>
-          ))}
-        </div>
-        <button onClick={() => setIsMemoMode(!isMemoMode)} className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${isMemoMode ? 'bg-indigo-600 text-white shadow-inner' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'}`}>
-          {isMemoMode ? <EyeOff size={16} /> : <Eye size={16} />} 暗記
-        </button>
-      </div>
-      <div className="p-4 space-y-3 pb-8">
-        {filteredData.map(item => <VocabItem key={item.id} item={item} speak={speak} isMemoMode={isMemoMode} />)}
-      </div>
-    </div>
-  );
-}
-
-function PhraseView({ speak }) {
-  const [isMemoMode, setIsMemoMode] = useState(false);
-  return (
-    <div className="flex-1 overflow-y-auto bg-slate-50 flex flex-col">
-      <div className="flex justify-end p-3 bg-white shadow-sm sticky top-0 z-10">
-        <button onClick={() => setIsMemoMode(!isMemoMode)} className={`flex items-center gap-1 px-4 py-1.5 rounded-full text-sm font-bold transition-colors ${isMemoMode ? 'bg-amber-500 text-white shadow-inner' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}`}>
-          {isMemoMode ? <EyeOff size={16} /> : <Eye size={16} />} 暗記モード
-        </button>
-      </div>
-      <div className="p-4 pb-8 space-y-4">
-        {phraseData.map(phrase => <PhraseItem key={phrase.id} phrase={phrase} speak={speak} isMemoMode={isMemoMode} />)}
-      </div>
-    </div>
-  );
-}
-
-// --- クイズコンポーネント ---
-
-function QuizView({ setView }) {
-  const [step, setStep] = useState('setup'); // 'setup', 'playing', 'result'
-  const [quizType, setQuizType] = useState('mix'); // 'vocab', 'phrase', 'mix'
-  const [quizFormat, setQuizFormat] = useState('en-jp'); // 'en-jp', 'jp-en', 'fill-in'
-  
-  const [questions, setQuestions] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [score, setScore] = useState(0);
-  const [selectedAnswer, setSelectedAnswer] = useState(null);
-  const [isCorrect, setIsCorrect] = useState(null);
-  const [quizHistory, setQuizHistory] = useState([]);
-
-  const startQuiz = () => {
-    let sourceData = [];
-    if (quizType === 'vocab' || quizFormat === 'fill-in') {
-      sourceData = vocabularyData.map(item => ({...item, type: 'vocab'}));
-    } else if (quizType === 'phrase') {
-      sourceData = phraseData.map(item => ({...item, type: 'phrase'}));
-    } else {
-      sourceData = [...vocabularyData.map(item => ({...item, type: 'vocab'})), ...phraseData.map(item => ({...item, type: 'phrase'}))];
+      );
     }
 
-    const shuffled = [...sourceData].sort(() => 0.5 - Math.random());
-    const maxQ = Math.min(10, shuffled.length);
-    const selected = shuffled.slice(0, maxQ);
-
-    const quizQuestions = selected.map(item => {
-      let questionNode = null;
-      let questionStr = "";
-      let answerText = "";
-      let wrongOptionsSource = [];
-
-      if (quizFormat === 'fill-in') {
-        // --- 穴埋め問題（TOEIC Part-5形式）の生成 ---
-        const enStr = item.en.split(' (')[0]; // カッコなどを除去して基本単語を抽出
-        const escapedEn = enStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        
-        // 複数形なども考慮した正規表現の構築 (berry -> berries, ball -> balls など)
-        let regexStr = escapedEn;
-        if (escapedEn.toLowerCase().endsWith('y')) {
-            regexStr = `${escapedEn.slice(0, -1)}(y|ies)`;
-        } else {
-            regexStr = `${escapedEn}(s|es)?`;
-        }
-        const regex = new RegExp(`\\b${regexStr}\\b`, 'i');
-        
-        let blankedExample = item.example;
-        if (regex.test(item.example)) {
-            blankedExample = item.example.replace(regex, '________');
-        } else {
-            // 見つからなかった場合のフォールバック（前方一致）
-            const firstWord = enStr.split(' ')[0];
-            const fwRegex = new RegExp(`\\b${firstWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(s|es|ies)?\\b`, 'i');
-            if (fwRegex.test(item.example)) {
-               blankedExample = item.example.replace(fwRegex, '________');
-            } else {
-               blankedExample = `[        ] ${item.example}`; 
-            }
-        }
-
-        questionNode = (
-          <div className="flex flex-col h-full justify-center">
-            <p className="text-xl mb-4 text-gray-800 leading-snug">{blankedExample}</p>
-            <p className="text-xs text-gray-400 font-normal">ヒント (意味): {item.jp}</p>
-          </div>
-        );
-        questionStr = blankedExample;
-        answerText = item.en;
-        
-        // ダミー選択肢はできるだけ同じカテゴリから抽出（品詞が似ている確率が高いため）
-        wrongOptionsSource = sourceData.filter(opt => opt.category === item.category && opt.id !== item.id).map(opt => opt.en);
-        if (wrongOptionsSource.length < 3) {
-            const others = sourceData.filter(opt => opt.id !== item.id && opt.category !== item.category).map(opt => opt.en);
-            wrongOptionsSource = [...wrongOptionsSource, ...others];
-        }
-      } else {
-        // --- 通常の英和・和英問題 ---
-        questionStr = quizFormat === 'en-jp' ? item.en : item.jp;
-        answerText = quizFormat === 'en-jp' ? item.jp : item.en;
-        wrongOptionsSource = sourceData
-          .filter(opt => opt.id !== item.id || opt.type !== item.type)
-          .map(opt => quizFormat === 'en-jp' ? opt.jp : opt.en);
-      }
-
-      const wrongOptions = wrongOptionsSource.sort(() => 0.5 - Math.random()).slice(0, 3);
-      const options = [...wrongOptions, answerText].sort(() => 0.5 - Math.random());
-
-      return {
-        questionStr: questionStr, // 履歴用文字列
-        questionNode: questionNode, // 画面描画用ノード (nullなら文字列を表示)
-        answer: answerText,
-        options: options,
-        type: item.type
-      };
-    });
-
-    setQuestions(quizQuestions);
-    setStep('playing');
-    setCurrentIndex(0);
-    setScore(0);
-    setSelectedAnswer(null);
-    setIsCorrect(null);
-    setQuizHistory([]);
-  };
-
-  const handleAnswer = (option) => {
-    if (selectedAnswer) return;
-
-    setSelectedAnswer(option);
-    const correct = option === questions[currentIndex].answer;
-    setIsCorrect(correct);
-    
-    if (correct) setScore(score + 1);
-
-    setQuizHistory(prev => [...prev, {
-      question: questions[currentIndex].questionStr,
-      answer: questions[currentIndex].answer,
-      userAnswer: option,
-      isCorrect: correct
-    }]);
-
-    setTimeout(() => {
-      if (currentIndex + 1 < questions.length) {
-        setCurrentIndex(currentIndex + 1);
-        setSelectedAnswer(null);
-        setIsCorrect(null);
-      } else {
-        setStep('result');
-      }
-    }, 1500);
-  };
-
-  if (step === 'setup') {
-    return (
-      <div className="flex-1 flex flex-col p-6 bg-slate-50">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex-1">
-          <div className="flex items-center gap-2 mb-6 border-b pb-4">
-            <Settings className="text-gray-400" />
-            <h2 className="text-xl font-bold text-gray-800">テスト設定 (全10問)</h2>
-          </div>
-          
-          <div className="space-y-8">
-            <div>
-              <h3 className="text-sm font-bold text-gray-500 mb-3">出題形式</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <button onClick={() => setQuizFormat('en-jp')} className={`p-3 rounded-xl text-sm font-bold border-2 transition-all ${quizFormat === 'en-jp' ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-sm' : 'border-gray-100 text-gray-500 hover:bg-gray-50'}`}>英語 → 日本語</button>
-                <button onClick={() => setQuizFormat('jp-en')} className={`p-3 rounded-xl text-sm font-bold border-2 transition-all ${quizFormat === 'jp-en' ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-sm' : 'border-gray-100 text-gray-500 hover:bg-gray-50'}`}>日本語 → 英語</button>
-                <button 
-                  onClick={() => { setQuizFormat('fill-in'); setQuizType('vocab'); }} 
-                  className={`p-3 rounded-xl text-sm font-bold border-2 transition-all ${quizFormat === 'fill-in' ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-sm' : 'border-gray-100 text-gray-500 hover:bg-gray-50'}`}
-                >
-                  穴埋め (Part5風)
-                </button>
+    function HomeView({ setView }) {
+      return (
+        <div className="flex flex-col h-full">
+          <div className="bg-blue-600 text-white pt-12 pb-8 px-6 rounded-b-3xl shadow-lg">
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-16 h-16 bg-red-500 rounded-full border-4 border-white flex items-center justify-center shadow-inner relative overflow-hidden">
+                 <div className="w-full h-1/2 bg-red-500 absolute top-0"></div>
+                 <div className="w-full h-1/2 bg-white absolute bottom-0"></div>
+                 <div className="w-full h-1 bg-gray-800 absolute top-1/2 -mt-[2px]"></div>
+                 <div className="w-4 h-4 bg-white rounded-full border-[2px] border-gray-800 z-10"></div>
               </div>
             </div>
+            <h1 className="text-3xl font-extrabold text-center tracking-wider">PokeEnglish</h1>
+            <p className="text-center text-blue-100 mt-2 text-sm">ポケモンGOで使える英語を学ぼう！</p>
+          </div>
 
-            <div className={quizFormat === 'fill-in' ? 'opacity-50' : ''}>
-              <h3 className="text-sm font-bold text-gray-500 mb-3 flex items-center justify-between">
-                出題範囲
-                {quizFormat === 'fill-in' && <span className="text-xs text-rose-500 font-normal">※穴埋めは単語のみ対応</span>}
-              </h3>
-              <div className="grid grid-cols-3 gap-2">
-                <button onClick={() => setQuizType('vocab')} className={`p-3 rounded-xl text-sm font-bold border-2 transition-all ${quizType === 'vocab' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'border-gray-100 text-gray-500 hover:bg-gray-50'}`}>単語のみ</button>
-                <button disabled={quizFormat === 'fill-in'} onClick={() => setQuizType('phrase')} className={`p-3 rounded-xl text-sm font-bold border-2 transition-all ${quizType === 'phrase' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'border-gray-100 text-gray-500 hover:bg-gray-50'} ${quizFormat === 'fill-in' ? 'cursor-not-allowed' : ''}`}>フレーズのみ</button>
-                <button disabled={quizFormat === 'fill-in'} onClick={() => setQuizType('mix')} className={`p-3 rounded-xl text-sm font-bold border-2 transition-all ${quizType === 'mix' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'border-gray-100 text-gray-500 hover:bg-gray-50'} ${quizFormat === 'fill-in' ? 'cursor-not-allowed' : ''}`}>すべて</button>
-              </div>
-            </div>
+          <div className="flex-1 p-6 flex flex-col gap-5 justify-center">
+            <MenuButton 
+              icon={<i className="fas fa-book-open text-[28px]"></i>} 
+              title="単語を学ぶ" 
+              subtitle="ゲーム内の用語を英語でチェック"
+              color="bg-emerald-500"
+              onClick={() => setView('vocab')}
+            />
+            <MenuButton 
+              icon={<i className="fas fa-comment-dots text-[28px]"></i>} 
+              title="フレーズを学ぶ" 
+              subtitle="レイドや交換で使える会話表現"
+              color="bg-amber-500"
+              onClick={() => setView('phrases')}
+            />
+            <MenuButton 
+              icon={<i className="fas fa-gamepad text-[28px]"></i>} 
+              title="クイズに挑戦" 
+              subtitle="TOEIC形式や単語テストに挑戦"
+              color="bg-rose-500"
+              onClick={() => setView('quiz')}
+            />
+            <MenuButton 
+              icon={<i className="fas fa-external-link-alt text-[24px]"></i>} 
+              title="ポケモン発音アプリ" 
+              subtitle="ポケモンの英語名を練習 (外部サイト)"
+              color="bg-violet-500"
+              onClick={() => window.open('https://kenkenpa5678.github.io/Pokemon-Pronunciation/', '_blank', 'noopener,noreferrer')}
+            />
+          </div>
+
+          <div className="p-4 text-center text-xs text-gray-400">
+            ※このアプリは非公式の学習用ツールです。
           </div>
         </div>
+      );
+    }
 
+    function MenuButton({ icon, title, subtitle, color, onClick }) {
+      return (
         <button 
-          onClick={startQuiz}
-          className="mt-6 w-full flex items-center justify-center gap-2 bg-rose-500 text-white p-4 rounded-xl font-bold text-lg hover:bg-rose-600 transition-colors shadow-md transform hover:scale-[1.02] active:scale-[0.98]"
+          onClick={onClick}
+          className={`${color} text-white p-5 rounded-2xl shadow-md hover:opacity-90 transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center gap-4 text-left`}
         >
-          <Play size={24} fill="currentColor" />
-          テストスタート！
+          <div className="bg-white/20 p-3 flex items-center justify-center rounded-xl w-[52px] h-[52px]">
+            {icon}
+          </div>
+          <div>
+            <h2 className="text-xl font-bold">{title}</h2>
+            <p className="text-sm opacity-90">{subtitle}</p>
+          </div>
         </button>
-      </div>
-    );
-  }
+      );
+    }
 
-  if (step === 'result') {
-    return (
-      <div className="flex-1 flex flex-col items-center p-6 bg-slate-50 h-full overflow-hidden">
-        <div className="flex flex-col items-center shrink-0">
-          <Trophy size={64} className="text-yellow-400 mb-2" />
-          <h2 className="text-2xl font-bold text-gray-800 mb-1">結果発表！</h2>
-          <p className="text-4xl font-extrabold text-blue-600 mb-4">
-            {score} / {questions.length} <span className="text-xl text-gray-500 font-normal">正解</span>
-          </p>
+    function VocabItem({ item, speak, isMemoMode }) {
+      const [revealed, setRevealed] = useState(false);
+
+      useEffect(() => {
+        setRevealed(false);
+      }, [isMemoMode]);
+
+      return (
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+          <div className="flex justify-between items-start mb-2">
+            <div className="flex-1 pr-4">
+              <h3 className="text-lg font-bold text-gray-800">{item.en}</h3>
+              {isMemoMode && !revealed ? (
+                <button 
+                  onClick={() => setRevealed(true)}
+                  className="mt-1 bg-gray-200 text-gray-500 rounded px-3 py-1 text-sm font-medium hover:bg-blue-100 hover:text-blue-600 transition-colors"
+                >
+                  タップして意味を表示
+                </button>
+              ) : (
+                <p className="text-md text-blue-600 font-medium">{item.jp}</p>
+              )}
+            </div>
+            <button 
+              onClick={() => speak(item.en)}
+              className="p-2 text-gray-400 hover:text-blue-500 bg-gray-50 rounded-full hover:bg-blue-50 transition-colors shrink-0"
+            >
+              <i className="fas fa-volume-up text-[20px]"></i>
+            </button>
+          </div>
+          <div className="mt-3 pt-3 border-t border-gray-50">
+            <p className="text-xs text-gray-500 mb-1">例文:</p>
+            <p className="text-sm text-gray-700 italic flex items-center justify-between">
+              "{item.example}"
+              <button onClick={() => speak(item.example)} className="text-gray-400 p-1 shrink-0">
+                 <i className="fas fa-volume-up text-[14px]"></i>
+              </button>
+            </p>
+          </div>
         </div>
-        
-        <div className="w-full max-w-sm flex-1 overflow-y-auto mb-4 border-t border-b border-gray-200 py-4">
-          <h3 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
-            <BookOpen size={18} />
-            テスト結果の振り返り
-          </h3>
-          <div className="space-y-3">
-            {quizHistory.map((item, i) => (
-              <div key={i} className={`p-3 rounded-xl border ${item.isCorrect ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
-                <p className="font-bold text-sm text-gray-800 mb-2">Q{i + 1}. {item.question}</p>
-                {item.isCorrect ? (
-                  <p className="text-emerald-600 text-xs font-bold flex items-center gap-1"><CheckCircle2 size={14}/> 正解: {item.answer}</p>
+      );
+    }
+
+    function PhraseItem({ phrase, speak, isMemoMode }) {
+      const [revealed, setRevealed] = useState(false);
+
+      useEffect(() => {
+        setRevealed(false);
+      }, [isMemoMode]);
+
+      return (
+        <div className="bg-white rounded-xl shadow-sm border-l-4 border-amber-400 overflow-hidden">
+          <div className="p-4">
+            <div className="flex justify-between items-start gap-2">
+              <div className="flex-1 pr-2">
+                <span className="inline-block px-2 py-0.5 bg-gray-100 text-gray-500 text-xs font-semibold rounded mb-2">
+                  {phrase.situation}
+                </span>
+                <h3 className="text-lg font-bold text-gray-800 leading-tight mb-2">{phrase.en}</h3>
+                {isMemoMode && !revealed ? (
+                  <button 
+                    onClick={() => setRevealed(true)}
+                    className="bg-gray-200 text-gray-500 rounded px-3 py-1 text-sm font-medium hover:bg-amber-100 hover:text-amber-700 transition-colors"
+                  >
+                    タップして意味を表示
+                  </button>
                 ) : (
-                  <div className="space-y-1">
-                    <p className="text-rose-600 text-xs font-bold flex items-center gap-1"><XCircle size={14}/> あなたの回答: {item.userAnswer}</p>
-                    <p className="text-emerald-600 text-xs font-bold flex items-center gap-1"><CheckCircle2 size={14}/> 正解: {item.answer}</p>
-                  </div>
+                  <p className="text-gray-600 text-sm">{phrase.jp}</p>
                 )}
               </div>
-            ))}
+              <button 
+                onClick={() => speak(phrase.en)}
+                className="p-3 bg-amber-50 text-amber-600 rounded-full hover:bg-amber-100 transition-colors shrink-0"
+              >
+                <i className="fas fa-volume-up text-[24px]"></i>
+              </button>
+            </div>
           </div>
         </div>
-        
-        <div className="w-full max-w-sm space-y-3 shrink-0">
-          <button onClick={() => setStep('setup')} className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white p-3 rounded-xl font-bold hover:bg-blue-700 transition-colors">
-            <Settings size={20} /> 設定を変えてもう一度
-          </button>
-          <button onClick={startQuiz} className="w-full flex items-center justify-center gap-2 bg-rose-100 text-rose-600 border-2 border-rose-200 p-3 rounded-xl font-bold hover:bg-rose-200 transition-colors">
-            <RefreshCw size={20} /> 同じ設定でリトライ
-          </button>
-          <button onClick={() => setView('home')} className="w-full flex items-center justify-center gap-2 bg-white text-gray-700 border-2 border-gray-200 p-3 rounded-xl font-bold hover:bg-gray-50 transition-colors">
-            <ArrowLeft size={20} /> ホームに戻る
-          </button>
+      );
+    }
+
+    function VocabView({ speak }) {
+      const [activeCategory, setActiveCategory] = useState('All');
+      const [isMemoMode, setIsMemoMode] = useState(false);
+      
+      const categories = ['All', ...new Set(vocabularyData.map(item => item.category))];
+      const filteredData = activeCategory === 'All' ? vocabularyData : vocabularyData.filter(item => item.category === activeCategory);
+
+      return (
+        <div className="flex-1 overflow-y-auto bg-slate-50 flex flex-col">
+          <div className="flex items-center p-3 gap-2 bg-white shadow-sm sticky top-0 z-10">
+            <div className="flex overflow-x-auto gap-2 hide-scrollbar flex-1">
+              {categories.map(cat => (
+                <button key={cat} onClick={() => setActiveCategory(cat)} className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${activeCategory === cat ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                  {cat}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setIsMemoMode(!isMemoMode)} className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${isMemoMode ? 'bg-indigo-600 text-white shadow-inner' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'}`}>
+              <i className={`fas ${isMemoMode ? 'fa-eye-slash' : 'fa-eye'} text-[16px]`}></i> 暗記
+            </button>
+          </div>
+          <div className="p-4 space-y-3 pb-8">
+            {filteredData.map(item => <VocabItem key={item.id} item={item} speak={speak} isMemoMode={isMemoMode} />)}
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  const currentQ = questions[currentIndex];
-
-  return (
-    <div className="flex-1 flex flex-col bg-slate-50 p-6 relative">
-      <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
-        <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${((currentIndex) / questions.length) * 100}%` }}></div>
-      </div>
-
-      <div className="text-sm text-gray-500 font-bold mb-2">
-        Question {currentIndex + 1} of {questions.length}
-      </div>
-
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8 min-h-[160px] flex items-center justify-center text-center relative overflow-hidden">
-        <Star size={120} className="absolute -right-10 -bottom-10 text-gray-50 opacity-50" />
-        <div className="z-10 w-full font-bold">
-          {currentQ.questionNode ? currentQ.questionNode : (
-            <h2 className="text-2xl text-gray-800 leading-relaxed">{currentQ.questionStr}</h2>
-          )}
+    function PhraseView({ speak }) {
+      const [isMemoMode, setIsMemoMode] = useState(false);
+      return (
+        <div className="flex-1 overflow-y-auto bg-slate-50 flex flex-col">
+          <div className="flex justify-end p-3 bg-white shadow-sm sticky top-0 z-10">
+            <button onClick={() => setIsMemoMode(!isMemoMode)} className={`flex items-center gap-1 px-4 py-1.5 rounded-full text-sm font-bold transition-colors ${isMemoMode ? 'bg-amber-500 text-white shadow-inner' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}`}>
+              <i className={`fas ${isMemoMode ? 'fa-eye-slash' : 'fa-eye'} text-[16px]`}></i> 暗記モード
+            </button>
+          </div>
+          <div className="p-4 pb-8 space-y-4">
+            {phraseData.map(phrase => <PhraseItem key={phrase.id} phrase={phrase} speak={speak} isMemoMode={isMemoMode} />)}
+          </div>
         </div>
-      </div>
+      );
+    }
 
-      <div className="space-y-3 flex-1">
-        {currentQ.options.map((option, idx) => {
-          let btnClass = "bg-white border-2 border-gray-200 text-gray-700 hover:border-blue-400 hover:bg-blue-50";
-          let icon = null;
+    function QuizView({ setView }) {
+      const [step, setStep] = useState('setup');
+      const [quizType, setQuizType] = useState('mix');
+      const [quizFormat, setQuizFormat] = useState('en-jp');
+      
+      const [questions, setQuestions] = useState([]);
+      const [currentIndex, setCurrentIndex] = useState(0);
+      const [score, setScore] = useState(0);
+      const [selectedAnswer, setSelectedAnswer] = useState(null);
+      const [isCorrect, setIsCorrect] = useState(null);
+      const [quizHistory, setQuizHistory] = useState([]);
 
-          if (selectedAnswer) {
-             if (option === currentQ.answer) {
-               btnClass = "bg-emerald-100 border-2 border-emerald-500 text-emerald-800";
-               icon = <CheckCircle2 className="text-emerald-500" size={20} />;
-             } else if (option === selectedAnswer && !isCorrect) {
-               btnClass = "bg-rose-100 border-2 border-rose-500 text-rose-800";
-               icon = <XCircle className="text-rose-500" size={20} />;
-             } else {
-               btnClass = "bg-gray-50 border-2 border-gray-200 text-gray-400 opacity-50";
-             }
+      const startQuiz = () => {
+        let sourceData = [];
+        if (quizType === 'vocab' || quizFormat === 'fill-in') {
+          sourceData = vocabularyData.map(item => ({...item, type: 'vocab'}));
+        } else if (quizType === 'phrase') {
+          sourceData = phraseData.map(item => ({...item, type: 'phrase'}));
+        } else {
+          sourceData = [...vocabularyData.map(item => ({...item, type: 'vocab'})), ...phraseData.map(item => ({...item, type: 'phrase'}))];
+        }
+
+        const shuffled = [...sourceData].sort(() => 0.5 - Math.random());
+        const maxQ = Math.min(10, shuffled.length);
+        const selected = shuffled.slice(0, maxQ);
+
+        const quizQuestions = selected.map(item => {
+          let questionNode = null;
+          let questionStr = "";
+          let answerText = "";
+          let wrongOptionsSource = [];
+
+          if (quizFormat === 'fill-in') {
+            const enStr = item.en.split(' (')[0];
+            const escapedEn = enStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            
+            let regexStr = escapedEn;
+            if (escapedEn.toLowerCase().endsWith('y')) {
+                regexStr = `${escapedEn.slice(0, -1)}(y|ies)`;
+            } else {
+                regexStr = `${escapedEn}(s|es)?`;
+            }
+            const regex = new RegExp(`\\b${regexStr}\\b`, 'i');
+            
+            let blankedExample = item.example;
+            if (regex.test(item.example)) {
+                blankedExample = item.example.replace(regex, '________');
+            } else {
+                const firstWord = enStr.split(' ')[0];
+                const fwRegex = new RegExp(`\\b${firstWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(s|es|ies)?\\b`, 'i');
+                if (fwRegex.test(item.example)) {
+                   blankedExample = item.example.replace(fwRegex, '________');
+                } else {
+                   blankedExample = `[        ] ${item.example}`; 
+                }
+            }
+
+            questionNode = (
+              <div className="flex flex-col h-full justify-center">
+                <p className="text-xl mb-4 text-gray-800 leading-snug">{blankedExample}</p>
+                <p className="text-xs text-gray-400 font-normal">ヒント (意味): {item.jp}</p>
+              </div>
+            );
+            questionStr = blankedExample;
+            answerText = item.en;
+            
+            wrongOptionsSource = sourceData.filter(opt => opt.category === item.category && opt.id !== item.id).map(opt => opt.en);
+            if (wrongOptionsSource.length < 3) {
+                const others = sourceData.filter(opt => opt.id !== item.id && opt.category !== item.category).map(opt => opt.en);
+                wrongOptionsSource = [...wrongOptionsSource, ...others];
+            }
+          } else {
+            questionStr = quizFormat === 'en-jp' ? item.en : item.jp;
+            answerText = quizFormat === 'en-jp' ? item.jp : item.en;
+            wrongOptionsSource = sourceData
+              .filter(opt => opt.id !== item.id || opt.type !== item.type)
+              .map(opt => quizFormat === 'en-jp' ? opt.jp : opt.en);
           }
 
-          return (
-            <button
-              key={idx}
-              disabled={selectedAnswer !== null}
-              onClick={() => handleAnswer(option)}
-              className={`w-full p-4 rounded-xl text-left font-medium transition-all flex items-center justify-between ${btnClass}`}
+          const wrongOptions = wrongOptionsSource.sort(() => 0.5 - Math.random()).slice(0, 3);
+          const options = [...wrongOptions, answerText].sort(() => 0.5 - Math.random());
+
+          return {
+            questionStr: questionStr,
+            questionNode: questionNode,
+            answer: answerText,
+            options: options,
+            type: item.type
+          };
+        });
+
+        setQuestions(quizQuestions);
+        setStep('playing');
+        setCurrentIndex(0);
+        setScore(0);
+        setSelectedAnswer(null);
+        setIsCorrect(null);
+        setQuizHistory([]);
+      };
+
+      const handleAnswer = (option) => {
+        if (selectedAnswer) return;
+
+        setSelectedAnswer(option);
+        const correct = option === questions[currentIndex].answer;
+        setIsCorrect(correct);
+        
+        if (correct) setScore(score + 1);
+
+        setQuizHistory(prev => [...prev, {
+          question: questions[currentIndex].questionStr,
+          answer: questions[currentIndex].answer,
+          userAnswer: option,
+          isCorrect: correct
+        }]);
+
+        setTimeout(() => {
+          if (currentIndex + 1 < questions.length) {
+            setCurrentIndex(currentIndex + 1);
+            setSelectedAnswer(null);
+            setIsCorrect(null);
+          } else {
+            setStep('result');
+          }
+        }, 1500);
+      };
+
+      if (step === 'setup') {
+        return (
+          <div className="flex-1 flex flex-col p-6 bg-slate-50">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex-1">
+              <div className="flex items-center gap-2 mb-6 border-b pb-4">
+                <i className="fas fa-cog text-gray-400 text-[24px]"></i>
+                <h2 className="text-xl font-bold text-gray-800">テスト設定 (全10問)</h2>
+              </div>
+              
+              <div className="space-y-8">
+                <div>
+                  <h3 className="text-sm font-bold text-gray-500 mb-3">出題形式</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <button onClick={() => setQuizFormat('en-jp')} className={`p-3 rounded-xl text-sm font-bold border-2 transition-all ${quizFormat === 'en-jp' ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-sm' : 'border-gray-100 text-gray-500 hover:bg-gray-50'}`}>英語 → 日本語</button>
+                    <button onClick={() => setQuizFormat('jp-en')} className={`p-3 rounded-xl text-sm font-bold border-2 transition-all ${quizFormat === 'jp-en' ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-sm' : 'border-gray-100 text-gray-500 hover:bg-gray-50'}`}>日本語 → 英語</button>
+                    <button 
+                      onClick={() => { setQuizFormat('fill-in'); setQuizType('vocab'); }} 
+                      className={`p-3 rounded-xl text-sm font-bold border-2 transition-all ${quizFormat === 'fill-in' ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-sm' : 'border-gray-100 text-gray-500 hover:bg-gray-50'}`}
+                    >
+                      穴埋め (Part5風)
+                    </button>
+                  </div>
+                </div>
+
+                <div className={quizFormat === 'fill-in' ? 'opacity-50' : ''}>
+                  <h3 className="text-sm font-bold text-gray-500 mb-3 flex items-center justify-between">
+                    出題範囲
+                    {quizFormat === 'fill-in' && <span className="text-xs text-rose-500 font-normal">※穴埋めは単語のみ対応</span>}
+                  </h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button onClick={() => setQuizType('vocab')} className={`p-3 rounded-xl text-sm font-bold border-2 transition-all ${quizType === 'vocab' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'border-gray-100 text-gray-500 hover:bg-gray-50'}`}>単語のみ</button>
+                    <button disabled={quizFormat === 'fill-in'} onClick={() => setQuizType('phrase')} className={`p-3 rounded-xl text-sm font-bold border-2 transition-all ${quizType === 'phrase' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'border-gray-100 text-gray-500 hover:bg-gray-50'} ${quizFormat === 'fill-in' ? 'cursor-not-allowed' : ''}`}>フレーズのみ</button>
+                    <button disabled={quizFormat === 'fill-in'} onClick={() => setQuizType('mix')} className={`p-3 rounded-xl text-sm font-bold border-2 transition-all ${quizType === 'mix' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'border-gray-100 text-gray-500 hover:bg-gray-50'} ${quizFormat === 'fill-in' ? 'cursor-not-allowed' : ''}`}>すべて</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button 
+              onClick={startQuiz}
+              className="mt-6 w-full flex items-center justify-center gap-2 bg-rose-500 text-white p-4 rounded-xl font-bold text-lg hover:bg-rose-600 transition-colors shadow-md transform hover:scale-[1.02] active:scale-[0.98]"
             >
-              <span>{option}</span>
-              {icon}
+              <i className="fas fa-play text-[24px]"></i>
+              テストスタート！
             </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
+          </div>
+        );
+      }
+
+      if (step === 'result') {
+        return (
+          <div className="flex-1 flex flex-col items-center p-6 bg-slate-50 h-full overflow-hidden">
+            <div className="flex flex-col items-center shrink-0">
+              <i className="fas fa-trophy text-yellow-400 text-[64px] mb-2"></i>
+              <h2 className="text-2xl font-bold text-gray-800 mb-1">結果発表！</h2>
+              <p className="text-4xl font-extrabold text-blue-600 mb-4">
+                {score} / {questions.length} <span className="text-xl text-gray-500 font-normal">正解</span>
+              </p>
+            </div>
+            
+            <div className="w-full max-w-sm flex-1 overflow-y-auto mb-4 border-t border-b border-gray-200 py-4">
+              <h3 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
+                <i className="fas fa-book-open text-[18px]"></i>
+                テスト結果の振り返り
+              </h3>
+              <div className="space-y-3">
+                {quizHistory.map((item, i) => (
+                  <div key={i} className={`p-3 rounded-xl border ${item.isCorrect ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
+                    <p className="font-bold text-sm text-gray-800 mb-2">Q{i + 1}. {item.question}</p>
+                    {item.isCorrect ? (
+                      <p className="text-emerald-600 text-xs font-bold flex items-center gap-1"><i className="fas fa-check-circle text-[14px]"></i> 正解: {item.answer}</p>
+                    ) : (
+                      <div className="space-y-1">
+                        <p className="text-rose-600 text-xs font-bold flex items-center gap-1"><i className="fas fa-times-circle text-[14px]"></i> あなたの回答: {item.userAnswer}</p>
+                        <p className="text-emerald-600 text-xs font-bold flex items-center gap-1"><i className="fas fa-check-circle text-[14px]"></i> 正解: {item.answer}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="w-full max-w-sm space-y-3 shrink-0">
+              <button onClick={() => setStep('setup')} className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white p-3 rounded-xl font-bold hover:bg-blue-700 transition-colors">
+                <i className="fas fa-cog text-[20px]"></i> 設定を変えてもう一度
+              </button>
+              <button onClick={startQuiz} className="w-full flex items-center justify-center gap-2 bg-rose-100 text-rose-600 border-2 border-rose-200 p-3 rounded-xl font-bold hover:bg-rose-200 transition-colors">
+                <i className="fas fa-sync-alt text-[20px]"></i> 同じ設定でリトライ
+              </button>
+              <button onClick={() => setView('home')} className="w-full flex items-center justify-center gap-2 bg-white text-gray-700 border-2 border-gray-200 p-3 rounded-xl font-bold hover:bg-gray-50 transition-colors">
+                <i className="fas fa-arrow-left text-[20px]"></i> ホームに戻る
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      const currentQ = questions[currentIndex];
+
+      return (
+        <div className="flex-1 flex flex-col bg-slate-50 p-6 relative">
+          <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
+            <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${((currentIndex) / questions.length) * 100}%` }}></div>
+          </div>
+
+          <div className="text-sm text-gray-500 font-bold mb-2">
+            Question {currentIndex + 1} of {questions.length}
+          </div>
+
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8 min-h-[160px] flex items-center justify-center text-center relative overflow-hidden">
+            <i className="fas fa-star absolute -right-10 -bottom-10 text-gray-50 opacity-50 text-[120px]"></i>
+            <div className="z-10 w-full font-bold">
+              {currentQ.questionNode ? currentQ.questionNode : (
+                <h2 className="text-2xl text-gray-800 leading-relaxed">{currentQ.questionStr}</h2>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-3 flex-1">
+            {currentQ.options.map((option, idx) => {
+              let btnClass = "bg-white border-2 border-gray-200 text-gray-700 hover:border-blue-400 hover:bg-blue-50";
+              let icon = null;
+
+              if (selectedAnswer) {
+                 if (option === currentQ.answer) {
+                   btnClass = "bg-emerald-100 border-2 border-emerald-500 text-emerald-800";
+                   icon = <i className="fas fa-check-circle text-emerald-500 text-[20px]"></i>;
+                 } else if (option === selectedAnswer && !isCorrect) {
+                   btnClass = "bg-rose-100 border-2 border-rose-500 text-rose-800";
+                   icon = <i className="fas fa-times-circle text-rose-500 text-[20px]"></i>;
+                 } else {
+                   btnClass = "bg-gray-50 border-2 border-gray-200 text-gray-400 opacity-50";
+                 }
+              }
+
+              return (
+                <button
+                  key={idx}
+                  disabled={selectedAnswer !== null}
+                  onClick={() => handleAnswer(option)}
+                  className={`w-full p-4 rounded-xl text-left font-medium transition-all flex items-center justify-between ${btnClass}`}
+                >
+                  <span>{option}</span>
+                  {icon}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    // --- Reactアプリの起動 ---
+    const root = createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
